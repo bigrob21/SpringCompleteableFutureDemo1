@@ -2,6 +2,7 @@ package com.paul.robert.controllers;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import javax.annotation.PostConstruct;
 
@@ -40,15 +41,24 @@ public class AggregateAsyncEndpoint1 {
 	public ResponseEntity<AggregatedMessage> get(){
 		Map<String, Object> metricsMap = initiateGet(String.format(baseUrl+"%s", "/metrics")).get();
 		Map<String, Object> healthMap = initiateGet(String.format(baseUrl+"%s", "/health")).get();
-		AggregatedMessage msg = AggregatedMessage.builder()
-			.freeMemory((Integer)metricsMap.get("mem.free"))
-			.totalMemory((Integer)metricsMap.get("mem"))
-			.numOfProcessors((Integer)metricsMap.get("processors"))
-			.operationalStatus((String)healthMap.get("status"))
-			.build();
+		
+		CompletableFuture.supplyAsync(() -> initiateGet(String.format(baseUrl+"%s", "/metrics")))
+			.thenApply((opt) -> {
+				return opt.orElseThrow(() -> new IllegalArgumentException("Unable to retrieve data map for metrics"));
+			});
+			
+		//TODO: Compose the completeable futures
+		AggregatedMessage msg = null;
+//		AggregatedMessage msg = AggregatedMessage.builder()
+//			.freeMemory((Integer)metricsMap.get("mem.free"))
+//			.totalMemory((Integer)metricsMap.get("mem"))
+//			.numOfProcessors((Integer)metricsMap.get("processors"))
+//			.operationalStatus((String)healthMap.get("status"))
+//			.build();
+		
 		return ResponseEntity.ok(msg);
 	}
-
+	
 	@SuppressWarnings("finally")
 	private Optional<Map<String, Object>> initiateGet(String url) {
 		Optional<Map<String, Object>> retVal = Optional.empty();
